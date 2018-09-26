@@ -1,46 +1,81 @@
-const goodType = [
-    'cider',
-    'apples',
-    'suggar',
-    'water',
-    'grain'
-];
+const goodType = {
+    cider: 'cider',
+    apples: 'apples',
+    suggar: 'suggar',
+    water: 'water',
+    grain: 'grain'
+};
 
-const nodes = { 
-    'cider': [
+const nodes = {
+    [goodType.cider]: [
         {amount: -4, goodType: goodType.apples, days: 50},
         {amount: -2, goodType: goodType.suggar, days: 50},
         {amount: 2, goodType: goodType.cider, days: 50}
     ],
-    'apples': [
+    [goodType.apples]: [
         {amount: -3, goodType: goodType.water, days: 40},
         {amount: 2, goodType: goodType.apples, days: 40}
     ],
-    'suggar': [
+    [goodType.suggar]: [
         {amount: -2, goodType: goodType.water, days: 30},
         {amount: 2, goodType: goodType.suggar, days: 30}
     ],
-    'water': [
+    [goodType.water]: [
         {amount: 1, goodType: goodType.water, days: 10}
     ],
-    'grain': [
+    [goodType.grain]: [
         {amount: -2, goodType: goodType.water, days: 30},
         {amount: 2, goodType: goodType.grain, days: 30}
     ]
 };
-let goodTypeSelect = document.getElementById("goodTypeSelect");
-let amountInput = document.getElementById("amountInput");
+
+// const goodTypeSelect = document.getElementById("goodTypeSelect");
+// const amountInput = document.getElementById("amountInput");
+
+function groupBy(objectArray, property) {
+    return objectArray.reduce(function (acc, obj) {
+        var key = obj[property];
+        if (!acc[key]) {
+        acc[key] = [];
+        }
+        acc[key].push(obj);
+        return acc;
+    }, {});
+}
 
 function getLineFor(goodType){
-    const node = nodes[goodType];
-    const leastCommonMultiplierDays = node.map(bundle => bundle.days).reduce(lcm);
-    const normalizedBundles = normalizeBundles(node, leastCommonMultiplierDays);
-    const summedBundles = normalizedBundles.reduce(
-        (entryMap, e) => entryMap.set(e.goodType, [...entryMap.get(e.goodType)||[], e]),
-        new Map()
-    );
+    return resolve(nodes[goodType], nodes)
+}
 
-    return line;
+function resolve(bundles, allNodes){
+    let missingBundles = [];
+    do {
+        let leastCommonMultiplierDays = bundles.map(bundle => bundle.days).reduce(lcm);
+        let normalizedBundles = normalizeBundles(bundles, leastCommonMultiplierDays);
+
+        let bundlesPerType = groupBy(normalizedBundles, 'goodType');
+        let summedBundles = Object.entries(bundlesPerType).map(([goodType, bundles]) => {
+            var totalamount = bundles.reduce((sum, bundle) => sum += bundle.amount, 0);
+            console.log("summing "+bundles.length+" of "+goodType+" to "+totalamount);
+            return {amount: totalamount, goodType: goodType, days: leastCommonMultiplierDays};
+        });
+
+        let missingBundles = summedBundles
+            .filter(bundle => bundle.amount < 0).map(bundle => bundle.goodType)
+            .map(goodType => allNodes[goodType])
+            .reduce((acc, val) => acc.concat(val), []); //flatten
+
+        bundles = summedBundles.concat(missingBundles);
+        console.log("bundles: ", bundles);
+        console.log("missing bundles: ", missingBundles.length > 0);
+
+    } while(missingBundles.length > 0);
+
+    return {
+        bundles: bundles,
+        totalOutput: bundles.filter(bundle => bundle.amount > 0),
+        totalInput: bundles.filter(bundle => bundle.amount < 0)
+    };
 }
 
 function normalizeBundles(bundles, normalizedDays){
@@ -63,12 +98,11 @@ function initSelect(select, values){
 
 function onGoodTypeChange(value){   
     const line = getLineFor(goodTypeSelect.value);
-    console.debug("boerderij", line);
 }
 function onAmountChange(value){
     const goodType = document.getElementById("goodTypeSelect").value;
     const amount = document.getElementById("amountInput").value;
-    
+
     console.debug(goodType);
     console.debug(amount);
 }
@@ -85,5 +119,7 @@ function gcd(a,b){
 }
 
 (function(){
-    initSelect(goodTypeSelect, goodType);
+    const line = getLineFor(goodType.cider);
+    // console.log("result: ", line);
+    // initSelect(goodTypeSelect, goodType);
 })();
