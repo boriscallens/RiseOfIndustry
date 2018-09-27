@@ -61,18 +61,21 @@ function groupBy(objectArray, property) {
 // function getLineFor(goodType){
 //     return resolve([nodeType], nodes)
 // }
+function getSummedBundles(bundles){
+    let leastCommonMultiplierDays = bundles.map(bundle => bundle.days).reduce(lcm);
+    let normalizedBundles = normalizeBundles(bundles, leastCommonMultiplierDays);
+    let bundlesPerType = groupBy(normalizedBundles, 'goodType');
+    return Object.entries(bundlesPerType).map(([goodType, bundles]) => {
+        var totalamount = bundles.reduce((sum, bundle) => sum += bundle.amount, 0);
+        return {amount: totalamount, goodType: goodType, days: leastCommonMultiplierDays};
+    });
+}
 
 function resolve(nodeTypes, nodemap){
     let bundles = nodeTypes
         .map(nodeType => nodemap.get(nodeType))
         .reduce((acc, val) => acc.concat(val), []); //flatten
-    let leastCommonMultiplierDays = bundles.map(bundle => bundle.days).reduce(lcm);
-    let normalizedBundles = normalizeBundles(bundles, leastCommonMultiplierDays);
-    let bundlesPerType = groupBy(normalizedBundles, 'goodType');
-    let summedBundles = Object.entries(bundlesPerType).map(([goodType, bundles]) => {
-        var totalamount = bundles.reduce((sum, bundle) => sum += bundle.amount, 0);
-        return {amount: totalamount, goodType: goodType, days: leastCommonMultiplierDays};
-    });
+    let summedBundles = getSummedBundles(bundles);
     let missingTypes = summedBundles
         .filter(bundle => bundle.amount < 0)
         .map(bundle => bundle.goodType);
@@ -83,8 +86,7 @@ function resolve(nodeTypes, nodemap){
     console.log("missing: ", missingTypes);
 
     if(missingBundles.length < 1) {
-        bundles = bundles.concat(missingBundles);
-        let allBundlesNormalized = normalizeBundles(bundles, leastCommonMultiplierDays);
+        let allBundlesNormalized = getSummedBundles(bundles.concat(missingBundles));
 
         return {
             nodes: nodeTypes,
@@ -136,6 +138,8 @@ function gcd(a,b){
 
 (function(){
     const line = resolve([goodType.cider], nodes);
+    console.log(line);
+
     const outputs = line.bundles.map(bundle => bundle.goodType + ", " + bundle.amount)
     console.log("result: ", outputs);
     // initSelect(goodTypeSelect, goodType);
