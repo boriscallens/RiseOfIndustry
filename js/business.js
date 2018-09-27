@@ -1,3 +1,8 @@
+
+const goodTypeSelect = document.getElementById("goodTypeSelect");
+const amountInput = document.getElementById("amountInput");
+const nodesTable = document.getElementById("nodesTable");
+
 const goodType = {
     cider: 'cider',
     apples: 'apples',
@@ -44,9 +49,6 @@ const nodes = new Map ([
     ]
 ]);
 
-// const goodTypeSelect = document.getElementById("goodTypeSelect");
-// const amountInput = document.getElementById("amountInput");
-
 function groupBy(objectArray, property) {
     return objectArray.reduce(function (acc, obj) {
         var key = obj[property];
@@ -58,9 +60,6 @@ function groupBy(objectArray, property) {
     }, {});
 }
 
-// function getLineFor(goodType){
-//     return resolve([nodeType], nodes)
-// }
 function getSummedBundles(bundles){
     let leastCommonMultiplierDays = bundles.map(bundle => bundle.days).reduce(lcm);
     let normalizedBundles = normalizeBundles(bundles, leastCommonMultiplierDays);
@@ -114,12 +113,30 @@ function initSelect(select, values){
     options.forEach(option => select.add(option));
 }
 
+function populateNodeTable(nodes){
+    let reducer = (acc, currentValue) => acc.set(currentValue, (acc.get(currentValue) || 0) +1);
+    let nodeCounts = nodes.reduce(reducer, new Map());
+
+    while(nodesTable.rows.length > 1){
+        nodesTable.deleteRow(1);
+    }
+
+    [... nodeCounts.entries()].forEach(([nodeValue, nodeCount]) => {
+        let newRow = nodesTable.insertRow(-1);
+        let amountCell = newRow.insertCell(0);
+        let goodTypeCell = newRow.insertCell(1);
+        amountCell.appendChild(document.createTextNode(nodeCount));
+        goodTypeCell.appendChild(document.createTextNode(nodeValue));
+    });
+}
+
 function onGoodTypeChange(value){   
-    const line = getLineFor(goodTypeSelect.value);
+    const line = resolve([goodTypeSelect.value], nodes);
+    populateNodeTable(line.nodes);
 }
 function onAmountChange(value){
-    const goodType = document.getElementById("goodTypeSelect").value;
-    const amount = document.getElementById("amountInput").value;
+    const goodType = goodTypeSelect.value;
+    const amount = amountInput.value;
 
     console.debug(goodType);
     console.debug(amount);
@@ -137,10 +154,6 @@ function gcd(a,b){
 }
 
 (function(){
-    const line = resolve([goodType.cider], nodes);
-    console.log(line);
-
-    const outputs = line.bundles.map(bundle => bundle.goodType + ", " + bundle.amount)
-    console.log("result: ", outputs);
-    // initSelect(goodTypeSelect, goodType);
+    initSelect(goodTypeSelect, Object.values(goodType));
+    onGoodTypeChange();
 })();
