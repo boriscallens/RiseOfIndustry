@@ -6,28 +6,43 @@ const goodType = {
     grain: 'grain'
 };
 
-const nodes = {
-    [goodType.cider]: [
-        {amount: -4, goodType: goodType.apples, days: 50},
-        {amount: -2, goodType: goodType.suggar, days: 50},
-        {amount: 2, goodType: goodType.cider, days: 50}
+const nodes = new Map ([
+    [
+        goodType.cider,
+        [
+            {amount: -4, goodType: goodType.apples, days: 50},
+            {amount: -2, goodType: goodType.suggar, days: 50},
+            {amount: 2, goodType: goodType.cider, days: 50}
+        ]
     ],
-    [goodType.apples]: [
-        {amount: -3, goodType: goodType.water, days: 40},
-        {amount: 2, goodType: goodType.apples, days: 40}
+    [
+        goodType.apples,
+        [
+            {amount: -3, goodType: goodType.water, days: 40},
+            {amount: 2, goodType: goodType.apples, days: 40}
+        ]
     ],
-    [goodType.suggar]: [
-        {amount: -2, goodType: goodType.water, days: 30},
-        {amount: 2, goodType: goodType.suggar, days: 30}
+    [
+        goodType.suggar,
+        [
+            {amount: -2, goodType: goodType.water, days: 30},
+            {amount: 2, goodType: goodType.suggar, days: 30}
+        ]
     ],
-    [goodType.water]: [
-        {amount: 1, goodType: goodType.water, days: 10}
+    [
+        goodType.water,
+        [
+            {amount: 1, goodType: goodType.water, days: 10}
+        ]
     ],
-    [goodType.grain]: [
-        {amount: -2, goodType: goodType.water, days: 30},
-        {amount: 2, goodType: goodType.grain, days: 30}
+    [
+        goodType.grain,
+        [
+            {amount: -2, goodType: goodType.water, days: 30},
+            {amount: 2, goodType: goodType.grain, days: 30}
+        ]
     ]
-};
+]);
 
 // const goodTypeSelect = document.getElementById("goodTypeSelect");
 // const amountInput = document.getElementById("amountInput");
@@ -43,39 +58,40 @@ function groupBy(objectArray, property) {
     }, {});
 }
 
-function getLineFor(goodType){
-    return resolve(nodes[goodType], nodes)
-}
+// function getLineFor(goodType){
+//     return resolve([nodeType], nodes)
+// }
 
-function resolve(bundles, allNodes){
-    let missingBundles = [];
-    do {
-        let leastCommonMultiplierDays = bundles.map(bundle => bundle.days).reduce(lcm);
-        let normalizedBundles = normalizeBundles(bundles, leastCommonMultiplierDays);
+function resolve(nodeTypes, nodemap){
+    let bundles = nodeTypes
+        .map(nodeType => nodemap.get(nodeType))
+        .reduce((acc, val) => acc.concat(val), []); //flatten
+    let leastCommonMultiplierDays = bundles.map(bundle => bundle.days).reduce(lcm);
+    let normalizedBundles = normalizeBundles(bundles, leastCommonMultiplierDays);
+    let bundlesPerType = groupBy(normalizedBundles, 'goodType');
+    let summedBundles = Object.entries(bundlesPerType).map(([goodType, bundles]) => {
+        var totalamount = bundles.reduce((sum, bundle) => sum += bundle.amount, 0);
+        return {amount: totalamount, goodType: goodType, days: leastCommonMultiplierDays};
+    });
+    let missingTypes = summedBundles
+        .filter(bundle => bundle.amount < 0)
+        .map(bundle => bundle.goodType);
+    let missingBundles = missingTypes
+        .map(goodType => nodemap.get(goodType))
+        .reduce((acc, val) => acc.concat(val), []); //flatten
 
-        let bundlesPerType = groupBy(normalizedBundles, 'goodType');
-        let summedBundles = Object.entries(bundlesPerType).map(([goodType, bundles]) => {
-            var totalamount = bundles.reduce((sum, bundle) => sum += bundle.amount, 0);
-            console.log("summing "+bundles.length+" of "+goodType+" to "+totalamount);
-            return {amount: totalamount, goodType: goodType, days: leastCommonMultiplierDays};
-        });
+    console.log("missing: ", missingTypes);
 
-        let missingBundles = summedBundles
-            .filter(bundle => bundle.amount < 0).map(bundle => bundle.goodType)
-            .map(goodType => allNodes[goodType])
-            .reduce((acc, val) => acc.concat(val), []); //flatten
+    if(missingBundles.length < 1) {
+        bundles = bundles.concat(missingBundles);
+        let allBundlesNormalized = normalizeBundles(bundles, leastCommonMultiplierDays);
 
-        bundles = summedBundles.concat(missingBundles);
-        console.log("bundles: ", bundles);
-        console.log("missing bundles: ", missingBundles.length > 0);
-
-    } while(missingBundles.length > 0);
-
-    return {
-        bundles: bundles,
-        totalOutput: bundles.filter(bundle => bundle.amount > 0),
-        totalInput: bundles.filter(bundle => bundle.amount < 0)
-    };
+        return {
+            nodes: nodeTypes,
+            bundles: allBundlesNormalized
+        }
+    }
+    return resolve(nodeTypes.concat(missingTypes), nodemap);
 }
 
 function normalizeBundles(bundles, normalizedDays){
@@ -119,7 +135,8 @@ function gcd(a,b){
 }
 
 (function(){
-    const line = getLineFor(goodType.cider);
-    // console.log("result: ", line);
+    const line = resolve([goodType.cider], nodes);
+    const outputs = line.bundles.map(bundle => bundle.goodType + ", " + bundle.amount)
+    console.log("result: ", outputs);
     // initSelect(goodTypeSelect, goodType);
 })();
