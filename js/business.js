@@ -109,7 +109,7 @@ function resolve(nodeTypes, amount, days, nodemap, recursion){
         console.log("redundant output: ", redundantOutputTypes)
         nodeTypes = nodeTypes.concat(desiredOutputType)
     } else if(!hasReachedOuputRatio) {
-        let multiplier = desiredOutputRatio / outputRatio;
+        let multiplier = Math.ceil(desiredOutputRatio / outputRatio);
         console.log("lacks output. Desired: " + desiredOutputRatio + " current: "+ outputRatio + ". Multiplying by "+ multiplier);
         nodeTypes = new Array(multiplier).fill(nodeTypes).reduce((acc, val) => acc.concat(val), []); //flatten
     }  else {
