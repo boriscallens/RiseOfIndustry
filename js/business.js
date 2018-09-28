@@ -72,8 +72,13 @@ function getSummedBundles(bundles){
     });
 }
 
-function resolve(nodeTypes, amount, days, nodemap){
+function resolve(nodeTypes, amount, days, nodemap, recursion){
     console.log("resolving for: ", nodeTypes);
+
+    if(recursion > 100) {
+        console.log("max recursion reached");
+        return null;
+    }
 
     let desiredOutputType = nodeTypes[0];
     let desiredOutputRatio = amount/days;
@@ -94,26 +99,27 @@ function resolve(nodeTypes, amount, days, nodemap){
     let outputRatio = desiredOutputBundle.amount / desiredOutputBundle.days;
 
     let hasMissingTypes = missingTypes.length > 0;
+    let hasReachedOuputRatio = !(amount > 0 && days > 0) || outputRatio >= desiredOutputRatio;
     let hasRedundantOutput = redundantOutputTypes.length > 0;
-    let hasReachedOuputRatio = outputRatio >= desiredOutputRatio;
 
     if(hasMissingTypes) {
         console.log("missing types: ", missingTypes)
         nodeTypes = nodeTypes.concat(missingTypes);
-    } else if(!hasReachedOuputRatio) {
-        console.log("lacks output. Desired: " + desiredOutputRatio + " current: "+ outputRatio);
-        nodeTypes = nodeTypes.concat(desiredOutputType)
     } else if(hasRedundantOutput) {
         console.log("redundant output: ", redundantOutputTypes)
         nodeTypes = nodeTypes.concat(desiredOutputType)
-    } else {
+    } else if(!hasReachedOuputRatio) {
+        let multiplier = desiredOutputRatio / outputRatio;
+        console.log("lacks output. Desired: " + desiredOutputRatio + " current: "+ outputRatio + ". Multiplying by "+ multiplier);
+        nodeTypes = new Array(multiplier).fill(nodeTypes).reduce((acc, val) => acc.concat(val), []); //flatten
+    }  else {
         return {
             nodes: nodeTypes,
             bundles: summedBundles
         }
     }
 
-    return resolve(nodeTypes, amount, days, nodemap);
+    return resolve(nodeTypes, amount, days, nodemap, (recursion || 0)+1);
 }
 
 function normalizeBundles(bundles, normalizedDays){
