@@ -1,7 +1,9 @@
 
 const goodTypeSelect = document.getElementById("goodTypeSelect");
 const amountInput = document.getElementById("amountInput");
+const daysInput = document.getElementById("daysInput");
 const nodesTable = document.getElementById("nodesTable");
+
 
 const goodType = {
     cider: 'cider',
@@ -70,8 +72,12 @@ function getSummedBundles(bundles){
     });
 }
 
-function resolve(nodeTypes, nodemap){
+function resolve(nodeTypes, amount, days, nodemap){
     console.log("resolving for: ", nodeTypes);
+
+    let desiredOutputType = nodeTypes[0];
+    let desiredOutputRatio = amount/days;
+
     let bundles = nodeTypes
         .map(nodeType => nodemap.get(nodeType))
         .reduce((acc, val) => acc.concat(val), []); //flatten
@@ -82,31 +88,32 @@ function resolve(nodeTypes, nodemap){
     let redundantOutputTypes = summedBundles
         .filter(bundle => bundle.amount > 0)
         .map(bundle => bundle.goodType)
-        .filter(goodType => goodType !== nodeTypes[0]);
-
-    // let missingBundles = missingTypes
-    //     .map(goodType => nodemap.get(goodType))
-    //     .reduce((acc, val) => acc.concat(val), []); //flatten
+        .filter(goodType => goodType !== desiredOutputType);
+    let desiredOutputBundle = summedBundles
+        .filter(bundle => bundle.goodType === desiredOutputType)[0];
+    let outputRatio = desiredOutputBundle.amount / desiredOutputBundle.days;
 
     let hasMissingTypes = missingTypes.length > 0;
     let hasRedundantOutput = redundantOutputTypes.length > 0;
-        
+    let hasReachedOuputRatio = outputRatio >= desiredOutputRatio;
+
     if(hasMissingTypes) {
         console.log("missing types: ", missingTypes)
         nodeTypes = nodeTypes.concat(missingTypes);
+    } else if(!hasReachedOuputRatio) {
+        console.log("lacks output. Desired: " + desiredOutputRatio + " current: "+ outputRatio);
+        nodeTypes = nodeTypes.concat(desiredOutputType)
     } else if(hasRedundantOutput) {
         console.log("redundant output: ", redundantOutputTypes)
-        nodeTypes = nodeTypes.concat(nodeTypes[0])
+        nodeTypes = nodeTypes.concat(desiredOutputType)
     } else {
-        //let allBundlesNormalized = summedBundles;
-
         return {
             nodes: nodeTypes,
             bundles: summedBundles
         }
     }
 
-    return resolve(nodeTypes, nodemap);
+    return resolve(nodeTypes, amount, days, nodemap);
 }
 
 function normalizeBundles(bundles, normalizedDays){
@@ -145,18 +152,21 @@ function populateNodeTable(nodes){
 }
 
 function onGoodTypeChange(value){   
-    const line = resolve([goodTypeSelect.value], nodes);
+    const line = resolve([goodTypeSelect.value], amountInput.value, daysInput.value, nodes);
 
     console.debug(line);
 
     populateNodeTable(line.nodes);
 }
 function onAmountChange(value){
-    const goodType = goodTypeSelect.value;
-    const amount = amountInput.value;
-
-    console.debug(goodType);
-    console.debug(amount);
+    const line = resolve([goodTypeSelect.value], amountInput.value, daysInput.value, nodes);
+    console.debug(line);
+    populateNodeTable(line.nodes);
+}
+function onDaysChange(value){
+    const line = resolve([goodTypeSelect.value], amountInput.value, daysInput.value, nodes);
+    console.debug(line);
+    populateNodeTable(line.nodes);
 }
 
 function lcm(a,b){
