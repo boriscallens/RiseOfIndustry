@@ -71,6 +71,7 @@ function getSummedBundles(bundles){
 }
 
 function resolve(nodeTypes, nodemap){
+    console.log("resolving for: ", nodeTypes);
     let bundles = nodeTypes
         .map(nodeType => nodemap.get(nodeType))
         .reduce((acc, val) => acc.concat(val), []); //flatten
@@ -78,21 +79,34 @@ function resolve(nodeTypes, nodemap){
     let missingTypes = summedBundles
         .filter(bundle => bundle.amount < 0)
         .map(bundle => bundle.goodType);
-    let missingBundles = missingTypes
-        .map(goodType => nodemap.get(goodType))
-        .reduce((acc, val) => acc.concat(val), []); //flatten
+    let redundantOutputTypes = summedBundles
+        .filter(bundle => bundle.amount > 0)
+        .map(bundle => bundle.goodType)
+        .filter(goodType => goodType !== nodeTypes[0]);
 
-    console.log("missing: ", missingTypes);
+    // let missingBundles = missingTypes
+    //     .map(goodType => nodemap.get(goodType))
+    //     .reduce((acc, val) => acc.concat(val), []); //flatten
 
-    if(missingBundles.length < 1) {
-        let allBundlesNormalized = getSummedBundles(bundles.concat(missingBundles));
+    let hasMissingTypes = missingTypes.length > 0;
+    let hasRedundantOutput = redundantOutputTypes.length > 0;
+        
+    if(hasMissingTypes) {
+        console.log("missing types: ", missingTypes)
+        nodeTypes = nodeTypes.concat(missingTypes);
+    } else if(hasRedundantOutput) {
+        console.log("redundant output: ", redundantOutputTypes)
+        nodeTypes = nodeTypes.concat(nodeTypes[0])
+    } else {
+        //let allBundlesNormalized = summedBundles;
 
         return {
             nodes: nodeTypes,
-            bundles: allBundlesNormalized
+            bundles: summedBundles
         }
     }
-    return resolve(nodeTypes.concat(missingTypes), nodemap);
+
+    return resolve(nodeTypes, nodemap);
 }
 
 function normalizeBundles(bundles, normalizedDays){
@@ -132,6 +146,9 @@ function populateNodeTable(nodes){
 
 function onGoodTypeChange(value){   
     const line = resolve([goodTypeSelect.value], nodes);
+
+    console.debug(line);
+
     populateNodeTable(line.nodes);
 }
 function onAmountChange(value){
