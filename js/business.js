@@ -6,7 +6,6 @@ const nodesTable = document.getElementById("nodesTable");
 
 
 const goodType = {
-    Car: 'Car',
     Adhesive: 'Adhesive',
     AppleSmoothie: 'AppleSmoothie',
     Apples: 'Apples',
@@ -140,6 +139,7 @@ const goodType = {
     Wool: 'Mutton',
     WorkClothes: 'WorkClothes',
     Yeast: 'Yeast',
+    Car: 'Car'
 };
 
 const nodes = new Map([
